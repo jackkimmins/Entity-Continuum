@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bouncing Square Demo</title>
+    <meta name="description" content="Just a simple demo of a bouncing square. Made with SDL2 and Emscripten.">
+    <meta property="og:url" content="https://github.com/jackkimmins/Bouncing-Square-Demo">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="emscripten">
+        <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    </div>
+
+    <script type='text/javascript'>
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (function () {
+                return function (text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                };
+            })(),
+            canvas: (() => {
+                const canvas = document.getElementById('canvas');
+
+                canvas.addEventListener("webglcontextlost", (e) => {
+                    alert('WebGL context lost. You will need to reload the page.');
+                    e.preventDefault();
+                }, false);
+
+                return canvas;
+            })()
+        };
+
+        window.onerror = (event) => {
+            console.error(event);
+        };
+    </script>
+
+    {{{ SCRIPT }}}
+</body>
+
+</html>
