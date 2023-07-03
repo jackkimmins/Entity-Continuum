@@ -33,16 +33,12 @@ std::mt19937 rng(time(0));
 class Food {
 public:
     int x, y;
-    int value;  // New field
 
     Food() {
         std::uniform_int_distribution<int> dist(0, WIDTH - 1);
         x = dist(rng);
         dist.param(std::uniform_int_distribution<int>::param_type(0, HEIGHT - 1));
         y = dist(rng);
-        // You could set the value field here, e.g., based on a normal distribution
-        std::normal_distribution<double> distValue(1.0, 0.5);
-        value = std::max(1, (int) distValue(rng));
     }
 
     double distanceTo(const Cell& cell) const;
@@ -219,9 +215,9 @@ void Update()
     std::vector<Cell> newCells; // Store newly created cells
 
     for (auto& cell : cells) {
-        Food* bestFood = nullptr;
+        Food* nearestFood = nullptr;
         Cell* nearestCell = nullptr;
-        double bestFoodValue = -std::numeric_limits<double>::max();
+        double minFoodDist = std::numeric_limits<double>::max();
         double minCellDist = MAX_GROWTH_RADIUS;
 
         for (auto& other : cells) {
@@ -237,14 +233,13 @@ void Update()
             double dx = cell.x - food.x;
             double dy = cell.y - food.y;
             double distance = std::hypot(dx, dy);
-            double value = food.value / (distance + 1.0);  // Calculate a value based on both distance and food value
-            if (value > bestFoodValue) {
-                bestFoodValue = value;
-                bestFood = &food;
+            if (distance < minFoodDist) {
+                minFoodDist = distance;
+                nearestFood = &food;
             }
         }
 
-        if (nearestCell != nullptr && minCellDist < bestFoodValue) {
+        if (nearestCell != nullptr && minCellDist < minFoodDist) {
             if (cell.radius > nearestCell->radius) {
                 cell.directionX = (nearestCell->x - cell.x) > 0 ? 1 : -1;
                 cell.directionY = (nearestCell->y - cell.y) > 0 ? 1 : -1;
@@ -252,9 +247,9 @@ void Update()
                 cell.directionX = (nearestCell->x - cell.x) > 0 ? -1 : 1;
                 cell.directionY = (nearestCell->y - cell.y) > 0 ? -1 : 1;
             }
-        } else if (bestFood != nullptr) {
-            cell.directionX = (bestFood->x - cell.x) > 0 ? 1 : -1;
-            cell.directionY = (bestFood->y - cell.y) > 0 ? 1 : -1;
+        } else if (nearestFood != nullptr) {
+            cell.directionX = (nearestFood->x - cell.x) > 0 ? 1 : -1;
+            cell.directionY = (nearestFood->y - cell.y) > 0 ? 1 : -1;
         }
 
         cell.updatePosition();
