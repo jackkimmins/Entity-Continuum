@@ -1,7 +1,7 @@
 CXX = em++
 CXXFLAGS = -O3 --std=c++20 -s USE_SDL=2 -sASSERTIONS -sALLOW_MEMORY_GROWTH
 TARGET = web/index.html
-SOURCE = bounce.cpp
+SOURCE = main.cpp
 SHELL_FILE = shell.html
 STYLE = style.css
 
