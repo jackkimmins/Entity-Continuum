@@ -15,7 +15,7 @@
 constexpr int WIDTH = 2560;
 constexpr int HEIGHT = 1440;
 constexpr int MIN_RADIUS = 1;
-constexpr int MAX_GROWTH_RADIUS = 8;
+constexpr int MAX_GROWTH_RADIUS = 10;
 constexpr int SPEED = 2;
 constexpr int MAX_COLOR_VALUE = 256;
 constexpr int NUM_CIRCLES = 500;
@@ -139,7 +139,7 @@ public:
     {
         int dx = x - other.x;
         int dy = y - other.y;
-        return std::hypot(dx, dy);
+        return dx * dx + dy * dy;
     }
 
     inline void split(std::vector<Cell>& newCells) {
@@ -168,7 +168,7 @@ public:
 double Food::distanceTo(const Cell& cell) const {
     int dx = x - cell.x;
     int dy = y - cell.y;
-    return std::hypot(dx, dy);
+    return dx * dx + dy * dy;
 }
 
 static SDL_Window* window = nullptr;
@@ -318,8 +318,6 @@ void Update()
 
     // Remove the eaten cells from the list
     cells.erase(std::remove_if(cells.begin(), cells.end(), [](const Cell& cell) { return cell.radius == 0; }), cells.end());
-
-    Render();
 }
 
 int main(int argc, char** argv)
@@ -329,7 +327,7 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    window = SDL_CreateWindow("Circle World", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
+    window = SDL_CreateWindow("Entity Continuum", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WIDTH, HEIGHT, 0);
     if (window == nullptr) {
         std::cout << "Failed to create window\n";
         return -1;
