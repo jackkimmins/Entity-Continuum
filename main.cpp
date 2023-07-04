@@ -15,13 +15,12 @@
 constexpr int WIDTH = 2560;
 constexpr int HEIGHT = 1440;
 constexpr int MIN_RADIUS = 1;
-constexpr int MAX_RADIUS = 2;
-constexpr int MAX_GROWTH_RADIUS = 10;
+constexpr int MAX_GROWTH_RADIUS = 8;
 constexpr int SPEED = 2;
 constexpr int MAX_COLOR_VALUE = 256;
-constexpr int NUM_CIRCLES = 150;
+constexpr int NUM_CIRCLES = 500;
 constexpr double DECAY_RATE = 0.5;
-constexpr int NUM_FOODS = 600;
+constexpr int NUM_FOODS = 700;
 constexpr int FOOD_RADIUS_INCREMENT = 1;
 
 class Food;
@@ -53,12 +52,12 @@ public:
     int directionX, directionY;
 
     Cell() {
-        std::uniform_int_distribution<int> dist1(0, 1);
-        directionX = (dist1(rng) ? 1 : -1) * SPEED;
-        directionY = (dist1(rng) ? 1 : -1) * SPEED;
+        std::uniform_int_distribution<int> dist(0, 3);  // Generate number from 0 to 3
+        int randNum = dist(rng);
+        directionX = (randNum & 1 ? 1 : -1) * SPEED;  // Extract 0th bit
+        directionY = (randNum & 2 ? 1 : -1) * SPEED;  // Extract 1st bit
         
-        std::uniform_int_distribution<int> dist2(MIN_RADIUS, MAX_RADIUS);
-        radius = dist2(rng);
+        radius = MIN_RADIUS;
 
         std::uniform_int_distribution<int> dist3(0, WIDTH - radius * 2 - 1);
         x = dist3(rng) + radius;
@@ -67,6 +66,11 @@ public:
 
         std::uniform_int_distribution<int> dist4(0, MAX_COLOR_VALUE - 1);
         std::generate_n(color.begin(), 3, [&]() { return dist4(rng); });
+    }
+
+    Cell(double x_, double y_, int radius_, int directionX_, int directionY_, std::array<int, 3> color_)
+        : x(x_), y(y_), radius(radius_), directionX(directionX_), directionY(directionY_), color(color_)
+    {
     }
 
     bool isSameColor(const Cell& other) const {
@@ -138,22 +142,23 @@ public:
         return std::hypot(dx, dy);
     }
 
-    void split(std::vector<Cell>& newCells) {
+    inline void split(std::vector<Cell>& newCells) {
         if (radius >= MAX_GROWTH_RADIUS) {
-            std::uniform_int_distribution<int> dist(2, 4);
-            // int newCellCount = dist(rng); // Generate a random number between 2 and 4
             const int newCellCount = 2;
             double angleStep = 2.0 * M_PI / newCellCount;
+            std::uniform_int_distribution<int> dist(0, 3);  // Generate number from 0 to 3
+            int randNum = dist(rng);
             for (int i = 0; i < newCellCount; ++i) {
-                Cell newCell;
                 double angle = i * angleStep;
-                newCell.x = x + std::cos(angle) * radius;
-                newCell.y = y + std::sin(angle) * radius;
-                newCell.radius = 1;
-                newCell.directionX = (rand() % 2 ? 1 : -1) * SPEED;
-                newCell.directionY = (rand() % 2 ? 1 : -1) * SPEED;
-                newCell.color = color;  // New cell has the same color as the parent cell
-                newCells.push_back(newCell);
+                newCells.emplace_back(
+                    x + std::cos(angle) * radius,
+                    y + std::sin(angle) * radius,
+                    1,
+                    (randNum & 1 ? 1 : -1) * SPEED,
+                    (randNum & 2 ? 1 : -1) * SPEED,
+                    color  // New cell has the same color as the parent cell
+                );
+                randNum = dist(rng);  // Generate new random number for the next new cell
             }
             radius = 1;
         }
@@ -182,19 +187,29 @@ void Render()
         int centerY = static_cast<int>(cell.y);
         int radius = cell.radius;
 
-        for (int w = 0; w < radius * 2; w++) {
-            for (int h = 0; h < radius * 2; h++) {
-                int dx = radius - w;
-                int dy = radius - h;
-                if ((dx * dx + dy * dy) <= (radius * radius)) {
-                    SDL_RenderDrawPoint(renderer, centerX + dx, centerY + dy);
-                }
+        int x = radius;
+        int y = 0;
+        int error = 1 - x;
+
+        while (x >= y) {
+            SDL_RenderDrawLine(renderer, centerX - x, centerY + y, centerX + x, centerY + y);
+            SDL_RenderDrawLine(renderer, centerX - x, centerY - y, centerX + x, centerY - y);
+            SDL_RenderDrawLine(renderer, centerX - y, centerY + x, centerX + y, centerY + x);
+            SDL_RenderDrawLine(renderer, centerX - y, centerY - x, centerX + y, centerY - x);
+
+            y++;
+            if (error <= 0) {
+                error += 2 * y + 1;
+            }
+            if (error > 0) {
+                x--;
+                error -= 2 * x + 1;
             }
         }
     }
 
     // Set color for rendering food
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255); // Change color to what you want
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 
     for (const auto& food : foods) {
         SDL_Rect foodRect;
@@ -271,14 +286,16 @@ void Update()
     }
 
     // Iterate over the cells and "eat" any smaller ones that overlap with larger ones
+    std::uniform_int_distribution<int> dist(0, 3);  // Generate number from 0 to 3
+    int randNum = dist(rng);
     for (auto& eater : cells) {
         for (auto& eaten : cells) {
             if (&eater != &eaten && eater.isOverlapping(eaten) && eater.radius > eaten.radius) {
                 // Only eat the cell if it is not of the same color
                 if (eater.color != eaten.color) {
                     // Randomize the direction of the eater cell
-                    eater.directionX = (rand() % 2 ? 1 : -1) * SPEED;
-                    eater.directionY = (rand() % 2 ? 1 : -1) * SPEED;
+                    eater.directionX = (randNum & 1 ? 1 : -1) * SPEED;
+                    eater.directionY = (randNum & 2 ? 1 : -1) * SPEED;
 
                     // Increase the count of eaten cells
                     eater.eatenCells++;
@@ -293,6 +310,7 @@ void Update()
                     eater.radius = std::min(MAX_GROWTH_RADIUS, eater.radius + static_cast<int>(eaten.radius * growthFactor));
 
                     eaten.radius = 0; // Mark the eaten cell for deletion by setting its radius to 0
+                    randNum = dist(rng);
                 }
             }
         }
